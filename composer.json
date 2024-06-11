@@ -1,0 +1,13 @@
+{
+  "require": {
+    "symfony/console": "^5.4.40",
+    "guzzlehttp/guzzle": "^7.8.1",
+    "ext-json": "*",
+    "ext-readline": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "CryptoTrade\\": "App/"
+    }
+  }
+}
