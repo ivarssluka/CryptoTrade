@@ -14,7 +14,7 @@ class CryptoService
         $this->client = new Client([
             'base_uri' => 'https://pro-api.coinmarketcap.com/v1/',
             'headers' => [
-                'X-CMC_PRO_API_KEY' => 'd64d03ac-0003-46fd-89b0-972fa699cff3'
+                'X-CMC_PRO_API_KEY' => 'YOUR_API_KEY_HERE'
             ]
         ]);
     }
