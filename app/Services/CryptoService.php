@@ -14,7 +14,7 @@ class CryptoService implements ApiClientInterface
 
     public function __construct()
     {
-        $dotenv = Dotenv::createImmutable( '.');
+        $dotenv = Dotenv::createImmutable('.');
         $dotenv->load();
 
         $cryptoCompareApiKey = $_ENV['CRYPTO_COMPARE_API_KEY'];
