@@ -6,18 +6,21 @@ use CryptoTrade\Models\User;
 use CryptoTrade\Models\Crypto;
 use CryptoTrade\Models\Transaction;
 use DateTime;
+use CryptoTrade\Contracts\ApiClientInterface;
 
 class WalletService
 {
     private User $user;
     private string $transactionsFile;
     private string $walletFile;
+    private ApiClientInterface $cryptoService;
 
-    public function __construct()
+    public function __construct(ApiClientInterface $cryptoService)
     {
         $this->user = new User();
         $this->transactionsFile = __DIR__ . '/../Storage/transactions.json';
         $this->walletFile = __DIR__ . '/../Storage/wallet.json';
+        $this->cryptoService = $cryptoService;
         $this->loadWallet();
     }
 
@@ -32,10 +35,12 @@ class WalletService
         $this->user->addToWallet($crypto->getSymbol(), $amount, $crypto->getPrice());
         $this->saveTransaction(
             new Transaction(
-            'buy',
-            $crypto->getSymbol(),
-            $amount, $crypto->getPrice(),
-            (new DateTime())->format('Y-m-d H:i:s')));
+                'buy',
+                $crypto->getSymbol(),
+                $amount,
+                $crypto->getPrice(),
+                (new DateTime())->format('Y-m-d H:i:s'))
+        );
         $this->saveWallet();
         return true;
     }
@@ -44,7 +49,7 @@ class WalletService
     {
         $wallet = $this->user->getWallet();
         $symbol = $crypto->getSymbol();
-        if (isset($wallet[$symbol]) === false || $wallet[$symbol] < $amount) {
+        if (isset($wallet[$symbol]) === false || $wallet[$symbol]['amount'] < $amount) {
             return false;
         }
         $earnings = $crypto->getPrice() * $amount;
@@ -54,8 +59,10 @@ class WalletService
             new Transaction(
                 'sell',
                 $crypto->getSymbol(),
-                $amount, $crypto->getPrice(),
-                (new DateTime())->format('Y-m-d H:i:s')));
+                $amount,
+                $crypto->getPrice(),
+                (new DateTime())->format('Y-m-d H:i:s'))
+        );
         $this->saveWallet();
         return true;
     }
@@ -67,9 +74,12 @@ class WalletService
 
     public function getTransactionHistory(): array
     {
-        $transactionsData = json_decode(file_get_contents($this->transactionsFile)) ?? [];
+        $transactionsData = json_decode(file_get_contents($this->transactionsFile), true) ?? [];
+        if ($transactionsData === null) {
+            return [];
+        }
         return array_map(function ($transactionData) {
-            return Transaction::fromObject($transactionData);
+            return Transaction::fromObject((object)$transactionData);
         }, $transactionsData);
     }
 
@@ -77,6 +87,7 @@ class WalletService
     {
         $overview = [];
         $wallet = $this->user->getWallet();
+
         $cryptoService = new CryptoService();
 
         foreach ($wallet as $symbol => $details) {
@@ -97,7 +108,6 @@ class WalletService
                 ];
             }
         }
-
         return $overview;
     }
 
@@ -116,10 +126,10 @@ class WalletService
     private function loadWallet(): void
     {
         if (file_exists($this->walletFile)) {
-            $data = json_decode(file_get_contents($this->walletFile));
-            if (is_object($data)) {
-                $this->user->setBalance((float)($data->balance ?? 1000.0));
-                $this->user->setWallet((array)($data->wallet ?? []));
+            $data = json_decode(file_get_contents($this->walletFile), true);
+            if ($data !== null) {
+                $this->user->setBalance((float)($data['balance'] ?? 1000.0));
+                $this->user->setWallet((array)($data['wallet'] ?? []));
             }
         }
     }

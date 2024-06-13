@@ -9,7 +9,7 @@ use CryptoTrade\Utils\TableRenderer;
 
 $user = new User();
 $cryptoService = new CryptoService();
-$walletService = new WalletService();
+$walletService = new WalletService($cryptoService);
 
 
 while (true) {
