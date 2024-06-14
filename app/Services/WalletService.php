@@ -7,32 +7,37 @@ use CryptoTrade\Models\Crypto;
 use CryptoTrade\Models\Transaction;
 use DateTime;
 use CryptoTrade\Contracts\ApiClientInterface;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception;
 
 class WalletService
 {
     private User $user;
-    private string $transactionsFile;
-    private string $walletFile;
     private ApiClientInterface $cryptoService;
+    private Connection $conn;
 
-    public function __construct(ApiClientInterface $cryptoService)
+    /**
+     * @throws Exception
+     */
+    public function __construct(ApiClientInterface $cryptoService, Connection $conn)
     {
-        $this->user = new User();
-        $this->transactionsFile = __DIR__ . '/../Storage/transactions.json';
-        $this->walletFile = __DIR__ . '/../Storage/wallet.json';
         $this->cryptoService = $cryptoService;
+        $this->conn = $conn;
+        $this->user = new User();
         $this->loadWallet();
     }
 
+    /**
+     * @throws Exception
+     */
     public function purchaseCrypto(Crypto $crypto, float $amount): bool
     {
         $cost = $crypto->getPrice() * $amount;
-
         if ($this->user->getBalance() < $cost) {
             return false;
         }
         $this->user->subtractBalance($cost);
-        $this->user->addToWallet($crypto->getSymbol(), $amount, $crypto->getPrice());
+        $this->addToWallet($crypto->getSymbol(), $amount, $crypto->getPrice());
         $this->saveTransaction(
             new Transaction(
                 'buy',
@@ -42,9 +47,13 @@ class WalletService
                 (new DateTime())->format('Y-m-d H:i:s'))
         );
         $this->saveWallet();
+        $this->saveUserBalance();
         return true;
     }
 
+    /**
+     * @throws Exception
+     */
     public function sellCrypto(Crypto $crypto, float $amount): bool
     {
         $wallet = $this->user->getWallet();
@@ -54,7 +63,7 @@ class WalletService
         }
         $earnings = $crypto->getPrice() * $amount;
         $this->user->addBalance($earnings);
-        $this->user->removeFromWallet($crypto->getSymbol(), $amount);
+        $this->removeFromWallet($crypto->getSymbol(), $amount);
         $this->saveTransaction(
             new Transaction(
                 'sell',
@@ -64,6 +73,7 @@ class WalletService
                 (new DateTime())->format('Y-m-d H:i:s'))
         );
         $this->saveWallet();
+        $this->saveUserBalance();
         return true;
     }
 
@@ -72,12 +82,16 @@ class WalletService
         return $this->user;
     }
 
+    /**
+     * @throws Exception
+     */
     public function getTransactionHistory(): array
     {
-        $transactionsData = json_decode(file_get_contents($this->transactionsFile), true) ?? [];
-        if ($transactionsData === null) {
-            return [];
-        }
+        $queryBuilder = $this->conn->createQueryBuilder();
+        $queryBuilder
+            ->select('*')
+            ->from('transactions');
+        $transactionsData = $queryBuilder->executeQuery()->fetchAllAssociative();
         return array_map(function ($transactionData) {
             return Transaction::fromObject((object)$transactionData);
         }, $transactionsData);
@@ -87,11 +101,8 @@ class WalletService
     {
         $overview = [];
         $wallet = $this->user->getWallet();
-
-        $cryptoService = new CryptoService();
-
         foreach ($wallet as $symbol => $details) {
-            $currentCrypto = $cryptoService->getCryptoBySymbol($symbol);
+            $currentCrypto = $this->cryptoService->getCryptoBySymbol($symbol);
             if ($currentCrypto) {
                 $currentPrice = $currentCrypto->getPrice();
                 $initialValue = $details['amount'] * $details['purchasePrice'];
@@ -111,26 +122,99 @@ class WalletService
         return $overview;
     }
 
+    /**
+     * @throws Exception
+     */
     private function saveTransaction(Transaction $transaction): void
     {
-        $transactions = $this->getTransactionHistory();
-        $transactions[] = $transaction;
-        file_put_contents($this->transactionsFile, json_encode($transactions, JSON_PRETTY_PRINT));
+        $this->conn->insert('transactions', [
+            'type' => $transaction->getType(),
+            'symbol' => $transaction->getSymbol(),
+            'amount' => $transaction->getAmount(),
+            'price' => $transaction->getPrice(),
+            'timestamp' => $transaction->getTimestamp()
+        ]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function saveWallet(): void
     {
-        file_put_contents($this->walletFile, json_encode($this->user, JSON_PRETTY_PRINT));
+        $this->conn->executeStatement('DELETE FROM wallet');
+        $wallet = $this->user->getWallet();
+        foreach ($wallet as $symbol => $details) {
+            $this->conn->insert('wallet', [
+                'symbol' => $symbol,
+                'amount' => $details['amount'],
+                'purchasePrice' => $details['purchasePrice']
+            ]);
+        }
     }
 
+    /**
+     * @throws Exception
+     */
     private function loadWallet(): void
     {
-        if (file_exists($this->walletFile)) {
-            $data = json_decode(file_get_contents($this->walletFile), true);
-            if ($data !== null) {
-                $this->user->setBalance((float)($data['balance'] ?? 1000.0));
-                $this->user->setWallet((array)($data['wallet'] ?? []));
+        $walletData = $this->conn->fetchAllAssociative('SELECT * FROM wallet');
+        $wallet = [];
+        foreach ($walletData as $item) {
+            $wallet[$item['symbol']] = [
+                'amount' => $item['amount'],
+                'purchasePrice' => $item['purchasePrice']
+            ];
+        }
+        $this->user->setWallet($wallet);
+        $balance = $this->conn->fetchOne('SELECT balance FROM user_balance WHERE id = 1');
+        if ($balance !== false) {
+            $this->user->setBalance((float)$balance);
+        } else {
+            $this->user->setBalance(1000.0);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function saveUserBalance(): void
+    {
+        $balance = $this->user->getBalance();
+        $this->conn->executeStatement('DELETE FROM user_balance WHERE id = 1');
+        $this->conn->insert('user_balance', [
+            'id' => 1,
+            'balance' => $balance
+        ]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function addToWallet(string $symbol, float $amount, float $purchasePrice): void
+    {
+        $wallet = $this->user->getWallet();
+        if (isset($wallet[$symbol]) === false) {
+            $wallet[$symbol] = ['amount' => 0.0, 'purchasePrice' => $purchasePrice];
+        }
+        $wallet[$symbol]['amount'] += $amount;
+        $wallet[$symbol]['purchasePrice'] = $purchasePrice;
+        $this->user->setWallet($wallet);
+        $this->saveWallet();
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function removeFromWallet(string $symbol, float $amount): void
+    {
+        $wallet = $this->user->getWallet();
+        if (isset($wallet[$symbol])) {
+            $wallet[$symbol]['amount'] -= $amount;
+            if ($wallet[$symbol]['amount'] <= 0) {
+                unset($wallet[$symbol]);
             }
         }
+        $this->user->setWallet($wallet);
+        $this->saveWallet();
     }
 }

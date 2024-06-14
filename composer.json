@@ -4,7 +4,8 @@
     "guzzlehttp/guzzle": "^7.8.1",
     "vlucas/phpdotenv": "^5.6",
     "ext-json": "*",
-    "ext-readline": "*"
+    "ext-readline": "*",
+    "doctrine/dbal": "^3.8"
   },
   "autoload": {
     "psr-4": {

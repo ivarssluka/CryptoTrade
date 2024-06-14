@@ -16,9 +16,7 @@ class CryptoService implements ApiClientInterface
     {
         $dotenv = Dotenv::createImmutable( '.');
         $dotenv->load();
-
         $cryptoCompareApiKey = $_ENV['CRYPTO_COMPARE_API_KEY'];
-
         $this->client = new Client([
             'base_uri' => 'https://min-api.cryptocompare.com/data/',
             'headers' => [
