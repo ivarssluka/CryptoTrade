@@ -62,8 +62,8 @@ class Transaction implements JsonSerializable
         return new self(
             $data->type,
             $data->symbol,
-            $data->amount,
-            $data->price,
+            (float)$data->amount,
+            (float)$data->price,
             $data->timestamp
         );
     }

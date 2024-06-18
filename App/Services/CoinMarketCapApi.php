@@ -2,19 +2,22 @@
 
 namespace CryptoTrade\Services;
 
+use Dotenv\Dotenv;
 use GuzzleHttp\Client;
-use CryptoTrade\Models\Crypto;
+use CryptoTrade\Models\CryptoCurrency;
 
-class CryptoService
+class CoinMarketCapApi
 {
     private Client $client;
 
     public function __construct()
     {
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+        $dotenv->load();
         $this->client = new Client([
             'base_uri' => 'https://pro-api.coinmarketcap.com/v1/',
             'headers' => [
-                'X-CMC_PRO_API_KEY' => 'YOUR_API_KEY_HERE'
+                'X-CMC_PRO_API_KEY' => $_ENV['CMC_API_KEY']
             ]
         ]);
     }
@@ -27,7 +30,7 @@ class CryptoService
         $cryptoData = json_decode($response->getBody()->getContents());
         $cryptos = [];
         foreach ($cryptoData->data as $item) {
-            $cryptos[] = new Crypto(
+            $cryptos[] = new CryptoCurrency(
                 $item->id,
                 $item->name,
                 $item->symbol,
@@ -37,7 +40,7 @@ class CryptoService
         return $cryptos;
     }
 
-    public function getCryptoBySymbol(string $symbol): ?Crypto
+    public function getCryptoBySymbol(string $symbol): ?CryptoCurrency
     {
         $response = $this->client->get('cryptocurrency/quotes/latest', [
             'query' => ['symbol' => $symbol]
@@ -45,7 +48,7 @@ class CryptoService
         $coinData = json_decode($response->getBody()->getContents());
         if (isset($coinData->data->$symbol)) {
             $item = $coinData->data->$symbol;
-            return new Crypto(
+            return new CryptoCurrency(
                 $item->id,
                 $item->name,
                 $item->symbol,

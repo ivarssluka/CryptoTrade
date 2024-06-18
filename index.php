@@ -3,12 +3,12 @@
 require 'vendor/autoload.php';
 
 use CryptoTrade\Models\User;
-use CryptoTrade\Services\CryptoService;
+use CryptoTrade\Services\CoinMarketCapApi;
 use CryptoTrade\Services\WalletService;
 use CryptoTrade\Utils\TableRenderer;
 
 $user = new User();
-$cryptoService = new CryptoService();
+$cryptoService = new CoinMarketCapApi();
 $walletService = new WalletService();
 
 

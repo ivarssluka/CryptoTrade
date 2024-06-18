@@ -3,7 +3,7 @@
 namespace CryptoTrade\Services;
 
 use CryptoTrade\Models\User;
-use CryptoTrade\Models\Crypto;
+use CryptoTrade\Models\CryptoCurrency;
 use CryptoTrade\Models\Transaction;
 use DateTime;
 
@@ -21,7 +21,7 @@ class WalletService
         $this->loadWallet();
     }
 
-    public function purchaseCrypto(Crypto $crypto, float $amount): bool
+    public function purchaseCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $cost = $crypto->getPrice() * $amount;
 
@@ -40,11 +40,11 @@ class WalletService
         return true;
     }
 
-    public function sellCrypto(Crypto $crypto, float $amount): bool
+    public function sellCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $wallet = $this->user->getWallet();
         $symbol = $crypto->getSymbol();
-        if (isset($wallet[$symbol]) === false || $wallet[$symbol] < $amount) {
+        if (isset($wallet[$symbol]) === false || $wallet[$symbol]['amount'] < $amount) {
             return false;
         }
         $earnings = $crypto->getPrice() * $amount;
@@ -67,9 +67,9 @@ class WalletService
 
     public function getTransactionHistory(): array
     {
-        $transactionsData = json_decode(file_get_contents($this->transactionsFile)) ?? [];
+        $transactionsData = json_decode(file_get_contents($this->transactionsFile), true) ?? [];
         return array_map(function ($transactionData) {
-            return Transaction::fromObject($transactionData);
+            return Transaction::fromObject((object)$transactionData);
         }, $transactionsData);
     }
 
@@ -77,7 +77,7 @@ class WalletService
     {
         $overview = [];
         $wallet = $this->user->getWallet();
-        $cryptoService = new CryptoService();
+        $cryptoService = new CoinMarketCapApi();
 
         foreach ($wallet as $symbol => $details) {
             $currentCrypto = $cryptoService->getCryptoBySymbol($symbol);
@@ -116,7 +116,7 @@ class WalletService
     private function loadWallet(): void
     {
         if (file_exists($this->walletFile)) {
-            $data = json_decode(file_get_contents($this->walletFile));
+            $data = json_decode(file_get_contents($this->walletFile), true);
             if (is_object($data)) {
                 $this->user->setBalance((float)($data->balance ?? 1000.0));
                 $this->user->setWallet((array)($data->wallet ?? []));

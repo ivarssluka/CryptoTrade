@@ -1,0 +1,30 @@
+[
+    {
+        "type": "buy",
+        "symbol": "ADA",
+        "amount": 100,
+        "price": 0.37608309473875273,
+        "timestamp": "2024-06-18 10:34:02"
+    },
+    {
+        "type": "buy",
+        "symbol": "ADA",
+        "amount": 100,
+        "price": 0.37608309473875273,
+        "timestamp": "2024-06-18 10:34:25"
+    },
+    {
+        "type": "sell",
+        "symbol": "ADA",
+        "amount": 199,
+        "price": 0.37608309473875273,
+        "timestamp": "2024-06-18 10:34:45"
+    },
+    {
+        "type": "sell",
+        "symbol": "ADA",
+        "amount": 1,
+        "price": 0.37608309473875273,
+        "timestamp": "2024-06-18 10:34:57"
+    }
+]

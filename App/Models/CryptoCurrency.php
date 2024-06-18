@@ -4,7 +4,7 @@ namespace CryptoTrade\Models;
 
 use JsonSerializable;
 
-class Crypto implements JsonSerializable
+class CryptoCurrency implements JsonSerializable
 {
     private string $id;
     private string $name;
