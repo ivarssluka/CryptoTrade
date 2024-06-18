@@ -27,49 +27,48 @@ class Database
         try {
             $schemaManager = $this->conn->createSchemaManager();
             $tables = $schemaManager->listTableNames();
-            if (in_array('wallet', $tables) === false) {
+
+            if (!in_array('users', $tables)) {
                 $this->conn->executeQuery('
-                    CREATE TABLE wallet (
+                    CREATE TABLE users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        symbol VARCHAR(10) UNIQUE,
+                        username VARCHAR(50) UNIQUE,
+                        password VARCHAR(255),
+                        balance FLOAT DEFAULT 1000.0
+                    )
+                ');
+            }
+
+            if (!in_array('wallets', $tables)) {
+                $this->conn->executeQuery('
+                    CREATE TABLE wallets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        symbol VARCHAR(10),
                         amount FLOAT,
-                        purchasePrice FLOAT
+                        purchasePrice FLOAT,
+                        FOREIGN KEY(user_id) REFERENCES users(id)
                     )
                 ');
             } else {
                 $this->conn->executeQuery('
-                    CREATE UNIQUE INDEX IF NOT EXISTS wallet_symbol_uindex ON wallet (symbol)
+                    CREATE UNIQUE INDEX IF NOT EXISTS wallets_user_id_symbol_uindex ON wallets (user_id, symbol)
                 ');
             }
 
-            if (in_array('transactions', $tables) === false) {
+            if (!in_array('transactions', $tables)) {
                 $this->conn->executeQuery('
                     CREATE TABLE transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
                         type VARCHAR(10),
                         symbol VARCHAR(10),
                         amount FLOAT,
                         price FLOAT,
-                        timestamp DATETIME
+                        timestamp DATETIME,
+                        FOREIGN KEY(user_id) REFERENCES users(id)
                     )
                 ');
-            }
-
-            if (in_array('user_balance', $tables) === false) {
-                $this->conn->executeQuery('
-                    CREATE TABLE user_balance (
-                        id INTEGER PRIMARY KEY,
-                        balance FLOAT
-                    )
-                ');
-
-                $balance = $this->conn->fetchOne('SELECT balance FROM user_balance WHERE id = 1');
-                if ($balance === false) {
-                    $this->conn->insert('user_balance', [
-                        'id' => 1,
-                        'balance' => 1000.0
-                    ]);
-                }
             }
 
             echo "Database setup completed.\n";

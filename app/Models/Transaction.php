@@ -6,6 +6,7 @@ use JsonSerializable;
 
 class Transaction implements JsonSerializable
 {
+    private int $userId;
     private string $type;
     private string $symbol;
     private float $amount;
@@ -13,6 +14,7 @@ class Transaction implements JsonSerializable
     private string $timestamp;
 
     public function __construct(
+        int $userId,
         string $type,
         string $symbol,
         float $amount,
@@ -20,11 +22,17 @@ class Transaction implements JsonSerializable
         string $timestamp
     )
     {
+        $this->userId = $userId;
         $this->type = $type;
         $this->symbol = $symbol;
         $this->amount = $amount;
         $this->price = $price;
         $this->timestamp = $timestamp;
+    }
+
+    public function getUserId(): int
+    {
+        return $this->userId;
     }
 
     public function getType(): string
@@ -55,6 +63,7 @@ class Transaction implements JsonSerializable
     public function jsonSerialize(): array
     {
         return [
+            'user_id' => $this->userId,
             'type' => $this->type,
             'symbol' => $this->symbol,
             'amount' => $this->amount,
@@ -66,6 +75,7 @@ class Transaction implements JsonSerializable
     public static function fromObject($data): self
     {
         return new self(
+            $data->user_id,
             $data->type,
             $data->symbol,
             (float)$data->amount,
