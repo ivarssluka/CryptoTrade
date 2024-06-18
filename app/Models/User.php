@@ -45,7 +45,11 @@ class User implements JsonSerializable
         $this->wallet = $wallet;
     }
 
-    public function addToWallet(string $symbol, float $amount, float $purchasePrice): void
+    public function addToWallet(
+        string $symbol,
+        float $amount,
+        float $purchasePrice
+    ): void
     {
         if (isset($this->wallet[$symbol]) === false) {
             $this->wallet[$symbol] = [

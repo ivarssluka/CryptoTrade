@@ -12,7 +12,13 @@ class Transaction implements JsonSerializable
     private float $price;
     private string $timestamp;
 
-    public function __construct(string $type, string $symbol, float $amount, float $price, string $timestamp)
+    public function __construct(
+        string $type,
+        string $symbol,
+        float $amount,
+        float $price,
+        string $timestamp
+    )
     {
         $this->type = $type;
         $this->symbol = $symbol;
@@ -62,8 +68,8 @@ class Transaction implements JsonSerializable
         return new self(
             $data->type,
             $data->symbol,
-            $data->amount,
-            $data->price,
+            (float)$data->amount,
+            (float)$data->price,
             $data->timestamp
         );
     }

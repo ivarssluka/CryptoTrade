@@ -3,14 +3,19 @@
 require 'vendor/autoload.php';
 
 use CryptoTrade\Models\User;
-use CryptoTrade\Services\CryptoService;
+use CryptoTrade\Services\CoinMarketCapApi;
+use CryptoTrade\Services\CryptoCompareApi;
 use CryptoTrade\Services\WalletService;
 use CryptoTrade\Utils\TableRenderer;
+use Dotenv\Dotenv;
 
-$user = new User();
-$cryptoService = new CryptoService();
-$walletService = new WalletService($cryptoService);
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
+$apiClient = new CoinMarketCapApi();
+//$apiClient = new CryptoCompareApi();
+
+$walletService = new WalletService($apiClient);
 
 while (true) {
     echo "\nWhat would you like to do?\n";
@@ -27,22 +32,22 @@ while (true) {
     switch ($choice) {
         case 1: // Add balance
             $amount = (float)readline("Enter the amount to add: ");
-            $user->addBalance($amount);
+            $walletService->getUser()->addBalance($amount);
             $walletService->saveWallet();
             echo "Balance added successfully.\n";
             break;
         case 2: // Withdraw balance
             $amount = (float)readline("Enter the amount to withdraw: ");
-            if ($user->getBalance() < $amount) {
+            if ($walletService->getUser()->getBalance() < $amount) {
                 echo "Insufficient balance.\n";
                 break;
             }
-            $user->subtractBalance($amount);
+            $walletService->getUser()->subtractBalance($amount);
             $walletService->saveWallet();
             echo "Balance withdrawn successfully.\n";
             break;
         case 3: // List top cryptocurrencies
-            $cryptos = $cryptoService->getTopCryptos();
+            $cryptos = $apiClient->getTopCryptos();
             $rows = array_map(fn($crypto) => [
                 $crypto->getId(),
                 $crypto->getName(),
@@ -53,7 +58,7 @@ while (true) {
             break;
         case 4: // Search cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 TableRenderer::render(['ID', 'Name', 'Symbol', 'Price'], [[
                     $crypto->getId(),
@@ -67,7 +72,7 @@ while (true) {
             break;
         case 5: // Purchase cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 $amount = (float)readline("Enter the amount to purchase: ");
                 if ($walletService->purchaseCrypto($crypto, $amount)) {
@@ -81,7 +86,7 @@ while (true) {
             break;
         case 6: // Sell cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 $amount = (float)readline("Enter the amount to sell: ");
                 if ($walletService->sellCrypto($crypto, $amount)) {
@@ -113,8 +118,7 @@ while (true) {
                 $item['profitLoss']
             ], $walletOverview);
             TableRenderer::render($headers, $rows);
-            $user = $walletService->getUser();
-            echo "Balance: ". number_format($user->getBalance(), 2) . "\n";
+            echo "Balance: ". number_format($walletService->getUser()->getBalance(), 2) . "\n";
             break;
         case 8: // Display transaction history
             $transactions = $walletService->getTransactionHistory();

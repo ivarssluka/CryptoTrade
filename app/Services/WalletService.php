@@ -3,28 +3,27 @@
 namespace CryptoTrade\Services;
 
 use CryptoTrade\Models\User;
-use CryptoTrade\Models\Crypto;
+use CryptoTrade\Models\CryptoCurrency;
 use CryptoTrade\Models\Transaction;
 use DateTime;
-use CryptoTrade\Contracts\ApiClientInterface;
 
 class WalletService
 {
     private User $user;
     private string $transactionsFile;
     private string $walletFile;
-    private ApiClientInterface $cryptoService;
+    private ApiClientInterface $apiClient;
 
-    public function __construct(ApiClientInterface $cryptoService)
+    public function __construct(ApiClientInterface $apiClient)
     {
         $this->user = new User();
         $this->transactionsFile = __DIR__ . '/../Storage/transactions.json';
         $this->walletFile = __DIR__ . '/../Storage/wallet.json';
-        $this->cryptoService = $cryptoService;
+        $this->apiClient = $apiClient;
         $this->loadWallet();
     }
 
-    public function purchaseCrypto(Crypto $crypto, float $amount): bool
+    public function purchaseCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $cost = $crypto->getPrice() * $amount;
 
@@ -37,19 +36,17 @@ class WalletService
             new Transaction(
                 'buy',
                 $crypto->getSymbol(),
-                $amount,
-                $crypto->getPrice(),
-                (new DateTime())->format('Y-m-d H:i:s'))
-        );
+                $amount, $crypto->getPrice(),
+                (new DateTime())->format('Y-m-d H:i:s')));
         $this->saveWallet();
         return true;
     }
 
-    public function sellCrypto(Crypto $crypto, float $amount): bool
+    public function sellCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $wallet = $this->user->getWallet();
         $symbol = $crypto->getSymbol();
-        if (isset($wallet[$symbol]) === false || $wallet[$symbol]['amount'] < $amount) {
+        if (!isset($wallet[$symbol]) || $wallet[$symbol]['amount'] < $amount) {
             return false;
         }
         $earnings = $crypto->getPrice() * $amount;
@@ -59,10 +56,8 @@ class WalletService
             new Transaction(
                 'sell',
                 $crypto->getSymbol(),
-                $amount,
-                $crypto->getPrice(),
-                (new DateTime())->format('Y-m-d H:i:s'))
-        );
+                $amount, $crypto->getPrice(),
+                (new DateTime())->format('Y-m-d H:i:s')));
         $this->saveWallet();
         return true;
     }
@@ -75,9 +70,6 @@ class WalletService
     public function getTransactionHistory(): array
     {
         $transactionsData = json_decode(file_get_contents($this->transactionsFile), true) ?? [];
-        if ($transactionsData === null) {
-            return [];
-        }
         return array_map(function ($transactionData) {
             return Transaction::fromObject((object)$transactionData);
         }, $transactionsData);
@@ -88,10 +80,8 @@ class WalletService
         $overview = [];
         $wallet = $this->user->getWallet();
 
-        $cryptoService = new CryptoService();
-
         foreach ($wallet as $symbol => $details) {
-            $currentCrypto = $cryptoService->getCryptoBySymbol($symbol);
+            $currentCrypto = $this->apiClient->getCryptoBySymbol($symbol);
             if ($currentCrypto) {
                 $currentPrice = $currentCrypto->getPrice();
                 $initialValue = $details['amount'] * $details['purchasePrice'];
@@ -108,6 +98,7 @@ class WalletService
                 ];
             }
         }
+
         return $overview;
     }
 
@@ -126,8 +117,8 @@ class WalletService
     private function loadWallet(): void
     {
         if (file_exists($this->walletFile)) {
-            $data = json_decode(file_get_contents($this->walletFile), true);
-            if ($data !== null) {
+            $data = json_decode(file_get_contents($this->walletFile), true); // Add true to decode as associative array
+            if (is_array($data)) {
                 $this->user->setBalance((float)($data['balance'] ?? 1000.0));
                 $this->user->setWallet((array)($data['wallet'] ?? []));
             }
