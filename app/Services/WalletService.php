@@ -3,77 +3,67 @@
 namespace CryptoTrade\Services;
 
 use CryptoTrade\Models\User;
-use CryptoTrade\Models\Crypto;
+use CryptoTrade\Models\CryptoCurrency;
 use CryptoTrade\Models\Transaction;
-use DateTime;
-use CryptoTrade\Contracts\ApiClientInterface;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception;
+use DateTime;
 
 class WalletService
 {
     private User $user;
-    private ApiClientInterface $cryptoService;
     private Connection $conn;
+    private ApiClientInterface $apiClient;
 
-    /**
-     * @throws Exception
-     */
-    public function __construct(ApiClientInterface $cryptoService, Connection $conn)
+    public function __construct(ApiClientInterface $apiClient, Database $database)
     {
-        $this->cryptoService = $cryptoService;
-        $this->conn = $conn;
-        $this->user = new User();
-        $this->loadWallet();
+        $this->conn = $database->getConnection();
+        $this->apiClient = $apiClient;
+        $this->loadUser();
     }
 
-    /**
-     * @throws Exception
-     */
-    public function purchaseCrypto(Crypto $crypto, float $amount): bool
+    private function loadUser(): void
+    {
+        $userData = $this->conn->fetchAssociative('SELECT * FROM user_balance WHERE id = 1');
+        if ($userData) {
+            $this->user = new User();
+            $this->user->setBalance((float)$userData['balance']);
+            $this->loadWallet();
+        } else {
+            $this->user = new User();
+        }
+    }
+
+    public function purchaseCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $cost = $crypto->getPrice() * $amount;
+
         if ($this->user->getBalance() < $cost) {
             return false;
         }
         $this->user->subtractBalance($cost);
-        $this->addToWallet($crypto->getSymbol(), $amount, $crypto->getPrice());
-        $this->saveTransaction(
-            new Transaction(
-                'buy',
-                $crypto->getSymbol(),
-                $amount,
-                $crypto->getPrice(),
-                (new DateTime())->format('Y-m-d H:i:s'))
-        );
+        $this->user->addToWallet($crypto->getSymbol(), $amount, $crypto->getPrice());
+        $this->saveTransaction(new Transaction('buy', $crypto->getSymbol(), $amount, $crypto->getPrice(), (new DateTime())->format('Y-m-d H:i:s')));
         $this->saveWallet();
-        $this->saveUserBalance();
         return true;
     }
 
-    /**
-     * @throws Exception
-     */
-    public function sellCrypto(Crypto $crypto, float $amount): bool
+    public function sellCrypto(CryptoCurrency $crypto, float $amount): bool
     {
         $wallet = $this->user->getWallet();
         $symbol = $crypto->getSymbol();
-        if (isset($wallet[$symbol]) === false || $wallet[$symbol]['amount'] < $amount) {
+        if (!isset($wallet[$symbol]) || $wallet[$symbol]['amount'] < $amount) {
             return false;
         }
         $earnings = $crypto->getPrice() * $amount;
         $this->user->addBalance($earnings);
-        $this->removeFromWallet($crypto->getSymbol(), $amount);
-        $this->saveTransaction(
-            new Transaction(
-                'sell',
-                $crypto->getSymbol(),
-                $amount,
-                $crypto->getPrice(),
-                (new DateTime())->format('Y-m-d H:i:s'))
-        );
+        $this->user->removeFromWallet($crypto->getSymbol(), $amount);
+
+        if ($wallet[$symbol]['amount'] <= 0) {
+            unset($wallet[$symbol]);
+        }
+
+        $this->saveTransaction(new Transaction('sell', $crypto->getSymbol(), $amount, $crypto->getPrice(), (new DateTime())->format('Y-m-d H:i:s')));
         $this->saveWallet();
-        $this->saveUserBalance();
         return true;
     }
 
@@ -82,16 +72,9 @@ class WalletService
         return $this->user;
     }
 
-    /**
-     * @throws Exception
-     */
     public function getTransactionHistory(): array
     {
-        $queryBuilder = $this->conn->createQueryBuilder();
-        $queryBuilder
-            ->select('*')
-            ->from('transactions');
-        $transactionsData = $queryBuilder->executeQuery()->fetchAllAssociative();
+        $transactionsData = $this->conn->fetchAllAssociative('SELECT * FROM transactions');
         return array_map(function ($transactionData) {
             return Transaction::fromObject((object)$transactionData);
         }, $transactionsData);
@@ -101,8 +84,9 @@ class WalletService
     {
         $overview = [];
         $wallet = $this->user->getWallet();
+
         foreach ($wallet as $symbol => $details) {
-            $currentCrypto = $this->cryptoService->getCryptoBySymbol($symbol);
+            $currentCrypto = $this->apiClient->getCryptoBySymbol($symbol);
             if ($currentCrypto) {
                 $currentPrice = $currentCrypto->getPrice();
                 $initialValue = $details['amount'] * $details['purchasePrice'];
@@ -119,12 +103,10 @@ class WalletService
                 ];
             }
         }
+
         return $overview;
     }
 
-    /**
-     * @throws Exception
-     */
     private function saveTransaction(Transaction $transaction): void
     {
         $this->conn->insert('transactions', [
@@ -136,13 +118,12 @@ class WalletService
         ]);
     }
 
-    /**
-     * @throws Exception
-     */
     public function saveWallet(): void
     {
-        $this->conn->executeStatement('DELETE FROM wallet');
         $wallet = $this->user->getWallet();
+
+        $this->conn->executeStatement('DELETE FROM wallet');
+
         foreach ($wallet as $symbol => $details) {
             $this->conn->insert('wallet', [
                 'symbol' => $symbol,
@@ -150,71 +131,20 @@ class WalletService
                 'purchasePrice' => $details['purchasePrice']
             ]);
         }
+
+        $this->conn->update('user_balance', ['balance' => $this->user->getBalance()], ['id' => 1]);
     }
 
-    /**
-     * @throws Exception
-     */
     private function loadWallet(): void
     {
         $walletData = $this->conn->fetchAllAssociative('SELECT * FROM wallet');
         $wallet = [];
-        foreach ($walletData as $item) {
-            $wallet[$item['symbol']] = [
-                'amount' => $item['amount'],
-                'purchasePrice' => $item['purchasePrice']
+        foreach ($walletData as $data) {
+            $wallet[$data['symbol']] = [
+                'amount' => (float)$data['amount'],
+                'purchasePrice' => (float)$data['purchasePrice']
             ];
         }
         $this->user->setWallet($wallet);
-        $balance = $this->conn->fetchOne('SELECT balance FROM user_balance WHERE id = 1');
-        if ($balance !== false) {
-            $this->user->setBalance((float)$balance);
-        } else {
-            $this->user->setBalance(1000.0);
-        }
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function saveUserBalance(): void
-    {
-        $balance = $this->user->getBalance();
-        $this->conn->executeStatement('DELETE FROM user_balance WHERE id = 1');
-        $this->conn->insert('user_balance', [
-            'id' => 1,
-            'balance' => $balance
-        ]);
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function addToWallet(string $symbol, float $amount, float $purchasePrice): void
-    {
-        $wallet = $this->user->getWallet();
-        if (isset($wallet[$symbol]) === false) {
-            $wallet[$symbol] = ['amount' => 0.0, 'purchasePrice' => $purchasePrice];
-        }
-        $wallet[$symbol]['amount'] += $amount;
-        $wallet[$symbol]['purchasePrice'] = $purchasePrice;
-        $this->user->setWallet($wallet);
-        $this->saveWallet();
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function removeFromWallet(string $symbol, float $amount): void
-    {
-        $wallet = $this->user->getWallet();
-        if (isset($wallet[$symbol])) {
-            $wallet[$symbol]['amount'] -= $amount;
-            if ($wallet[$symbol]['amount'] <= 0) {
-                unset($wallet[$symbol]);
-            }
-        }
-        $this->user->setWallet($wallet);
-        $this->saveWallet();
     }
 }

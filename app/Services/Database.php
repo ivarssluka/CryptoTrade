@@ -15,7 +15,7 @@ class Database
      */
     public function __construct()
     {
-        $databasePath = __DIR__ . '/../../app/storage/database.sqlite';
+        $databasePath = __DIR__ . '/../../storage/database.sqlite';
         $connectionParams = [
             'url' => 'sqlite:///' . $databasePath,
         ];
@@ -31,10 +31,14 @@ class Database
                 $this->conn->executeQuery('
                     CREATE TABLE wallet (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        symbol VARCHAR(10),
+                        symbol VARCHAR(10) UNIQUE,
                         amount FLOAT,
                         purchasePrice FLOAT
                     )
+                ');
+            } else {
+                $this->conn->executeQuery('
+                    CREATE UNIQUE INDEX IF NOT EXISTS wallet_symbol_uindex ON wallet (symbol)
                 ');
             }
 

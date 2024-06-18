@@ -2,20 +2,23 @@
 
 require 'vendor/autoload.php';
 
-use CryptoTrade\Services\CryptoService;
-use CryptoTrade\Services\WalletService;
+use CryptoTrade\Services\CoinMarketCapApi;
+use CryptoTrade\Services\CryptoCompareApi;
 use CryptoTrade\Services\Database;
+use CryptoTrade\Services\WalletService;
 use CryptoTrade\Utils\TableRenderer;
-use Doctrine\DBAL\Exception;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+//$apiClient = new CoinMarketCapApi();
+$apiClient = new CryptoCompareApi();
 
 $database = new Database();
 $database->setupDatabase();
-$cryptoService = new CryptoService();
-try {
-    $walletService = new WalletService($cryptoService, $database->getConnection());
-} catch (Exception $e) {
-}
-$user = $walletService->getUser();
+
+$walletService = new WalletService($apiClient, $database);
 
 while (true) {
     echo "\nWhat would you like to do?\n";
@@ -32,28 +35,22 @@ while (true) {
     switch ($choice) {
         case 1: // Add balance
             $amount = (float)readline("Enter the amount to add: ");
-            $user->addBalance($amount);
-            try {
-                $walletService->saveUserBalance();
-            } catch (Exception $e) {
-            }
+            $walletService->getUser()->addBalance($amount);
+            $walletService->saveWallet();
             echo "Balance added successfully.\n";
             break;
         case 2: // Withdraw balance
             $amount = (float)readline("Enter the amount to withdraw: ");
-            if ($user->getBalance() < $amount) {
+            if ($walletService->getUser()->getBalance() < $amount) {
                 echo "Insufficient balance.\n";
                 break;
             }
-            $user->subtractBalance($amount);
-            try {
-                $walletService->saveUserBalance();
-            } catch (Exception $e) {
-            }
+            $walletService->getUser()->subtractBalance($amount);
+            $walletService->saveWallet();
             echo "Balance withdrawn successfully.\n";
             break;
         case 3: // List top cryptocurrencies
-            $cryptos = $cryptoService->getTopCryptos();
+            $cryptos = $apiClient->getTopCryptos();
             $rows = array_map(fn($crypto) => [
                 $crypto->getId(),
                 $crypto->getName(),
@@ -64,7 +61,7 @@ while (true) {
             break;
         case 4: // Search cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 TableRenderer::render(['ID', 'Name', 'Symbol', 'Price'], [[
                     $crypto->getId(),
@@ -78,16 +75,13 @@ while (true) {
             break;
         case 5: // Purchase cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 $amount = (float)readline("Enter the amount to purchase: ");
-                try {
-                    if ($walletService->purchaseCrypto($crypto, $amount)) {
-                        echo "Purchase successful.\n";
-                    } else {
-                        echo "Insufficient balance.\n";
-                    }
-                } catch (Exception $e) {
+                if ($walletService->purchaseCrypto($crypto, $amount)) {
+                    echo "Purchase successful.\n";
+                } else {
+                    echo "Insufficient balance.\n";
                 }
             } else {
                 echo "Cryptocurrency not found.\n";
@@ -95,16 +89,13 @@ while (true) {
             break;
         case 6: // Sell cryptocurrency
             $symbol = readline("Enter the cryptocurrency symbol: ");
-            $crypto = $cryptoService->getCryptoBySymbol($symbol);
+            $crypto = $apiClient->getCryptoBySymbol($symbol);
             if ($crypto) {
                 $amount = (float)readline("Enter the amount to sell: ");
-                try {
-                    if ($walletService->sellCrypto($crypto, $amount)) {
-                        echo "Sell successful.\n";
-                    } else {
-                        echo "Insufficient cryptocurrency amount.\n";
-                    }
-                } catch (Exception $e) {
+                if ($walletService->sellCrypto($crypto, $amount)) {
+                    echo "Sell successful.\n";
+                } else {
+                    echo "Insufficient cryptocurrency amount.\n";
                 }
             } else {
                 echo "Cryptocurrency not found.\n";
@@ -130,13 +121,10 @@ while (true) {
                 $item['profitLoss']
             ], $walletOverview);
             TableRenderer::render($headers, $rows);
-            echo "Balance: ". number_format($user->getBalance(), 2) . "\n";
+            echo "Balance: ". number_format($walletService->getUser()->getBalance(), 2) . "\n";
             break;
         case 8: // Display transaction history
-            try {
-                $transactions = $walletService->getTransactionHistory();
-            } catch (Exception $e) {
-            }
+            $transactions = $walletService->getTransactionHistory();
             $rows = array_map(fn($transaction) => [
                 $transaction->getType(),
                 $transaction->getSymbol(),
