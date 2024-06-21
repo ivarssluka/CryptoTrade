@@ -2,3 +2,5 @@
 /.idea/
 apikey
 .env
+note.php
+structure.php

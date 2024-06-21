@@ -11,7 +11,12 @@ class CryptoCurrency implements JsonSerializable
     private string $symbol;
     private float $price;
 
-    public function __construct(string $id, string $name, string $symbol, float $price)
+    public function __construct(
+        string $id,
+        string $name,
+        string $symbol,
+        float $price
+    )
     {
         $this->id = $id;
         $this->name = $name;

@@ -1,9 +1,10 @@
 <?php
 
-namespace CryptoTrade\Services;
+namespace CryptoTrade\Api;
 
 use GuzzleHttp\Client;
 use CryptoTrade\Models\CryptoCurrency;
+use GuzzleHttp\Exception\GuzzleException;
 
 class CryptoCompareApi implements ApiClientInterface
 {
@@ -19,6 +20,9 @@ class CryptoCompareApi implements ApiClientInterface
         ]);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function getTopCryptos(int $limit = 10): array
     {
         $response = $this->client->get('top/mktcapfull', [
@@ -37,6 +41,9 @@ class CryptoCompareApi implements ApiClientInterface
         return $cryptos;
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function getCryptoBySymbol(string $symbol): ?CryptoCurrency
     {
         $response = $this->client->get('price', [

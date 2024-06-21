@@ -10,15 +10,21 @@ class User implements JsonSerializable
     private string $username;
     private string $password;
     private float $balance;
-    private array $wallet;
+    private Wallet $wallet;
 
-    public function __construct(int $id, string $username, string $password, float $balance = 1000.0)
+    public function __construct(
+        int $id,
+        string $username,
+        string $password,
+        float $balance = 1000.0,
+        Wallet $wallet = null
+    )
     {
         $this->id = $id;
         $this->username = $username;
         $this->password = $password;
         $this->balance = $balance;
-        $this->wallet = [];
+        $this->wallet = $wallet ?? new Wallet();
     }
 
     public function getId(): int
@@ -31,14 +37,14 @@ class User implements JsonSerializable
         return $this->username;
     }
 
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
     public function getBalance(): float
     {
         return $this->balance;
-    }
-
-    public function setBalance(float $balance): void
-    {
-        $this->balance = $balance;
     }
 
     public function addBalance(float $amount): void
@@ -51,38 +57,9 @@ class User implements JsonSerializable
         $this->balance -= $amount;
     }
 
-    public function getWallet(): array
+    public function getWallet(): Wallet
     {
         return $this->wallet;
-    }
-
-    public function setWallet(array $wallet): void
-    {
-        $this->wallet = $wallet;
-    }
-
-    public function addToWallet(string $symbol, float $amount, float $purchasePrice): void
-    {
-        if (isset($this->wallet[$symbol]) === false) {
-            $this->wallet[$symbol] = [
-                'amount' => 0.0,
-                'purchasePrice' => $purchasePrice
-            ];
-        }
-        $this->wallet[$symbol]['amount'] += $amount;
-        $this->wallet[$symbol]['purchasePrice'] = (($this->wallet[$symbol]['purchasePrice'] *
-                    $this->wallet[$symbol]['amount']) + ($purchasePrice * $amount)) /
-            ($this->wallet[$symbol]['amount'] + $amount);
-    }
-
-    public function removeFromWallet(string $symbol, float $amount): void
-    {
-        if (isset($this->wallet[$symbol])) {
-            $this->wallet[$symbol]['amount'] -= $amount;
-            if ($this->wallet[$symbol]['amount'] <= 0) {
-                unset($this->wallet[$symbol]);
-            }
-        }
     }
 
     public function verifyPassword(string $password): bool
@@ -96,7 +73,7 @@ class User implements JsonSerializable
             'id' => $this->id,
             'username' => $this->username,
             'balance' => $this->balance,
-            'wallet' => $this->wallet
+            'wallet' => $this->wallet->jsonSerialize()
         ];
     }
 }

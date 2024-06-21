@@ -1,6 +1,6 @@
 <?php
 
-namespace CryptoTrade\Services;
+namespace CryptoTrade\Api;
 
 use Exception;
 use GuzzleHttp\Client;
@@ -21,15 +21,12 @@ class CoinMarketCapApi implements ApiClientInterface
         ]);
     }
 
+    /**
+     * @throws Exception
+     */
     private function getResponseData(ResponseInterface $response): array
     {
         $data = json_decode($response->getBody()->getContents(), true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Error parsing JSON response: ' . json_last_error_msg());
-        }
-        if (!isset($data['data'])) {
-            throw new Exception('Invalid response format: "data" key missing');
-        }
         return $data['data'];
     }
 

@@ -2,14 +2,22 @@
 
 require 'vendor/autoload.php';
 
-use CryptoTrade\Services\CoinMarketCapApi;
-use CryptoTrade\Services\CryptoCompareApi;
+use CryptoTrade\Api\CoinMarketCapApi;
+use CryptoTrade\Api\CryptoCompareApi;
 use CryptoTrade\Services\Database;
-use CryptoTrade\Services\WalletService;
+use CryptoTrade\Services\Wallet\WalletService;
+use CryptoTrade\Services\Wallet\PurchaseCryptoService;
+use CryptoTrade\Services\Wallet\SellCryptoService;
+use CryptoTrade\Services\Wallet\WalletOverviewService;
+use CryptoTrade\Services\User\RegisterUserService;
+use CryptoTrade\Services\User\LoginUserService;
+use CryptoTrade\Services\Transactions\TransactionService;
+use CryptoTrade\Repositories\UserRepository;
+use CryptoTrade\Repositories\TransactionRepository;
+use CryptoTrade\Repositories\WalletRepository;
 use CryptoTrade\Utils\TableRenderer;
-use CryptoTrade\Models\User;
 use Dotenv\Dotenv;
-use Doctrine\DBAL\Connection;
+use CryptoTrade\Exceptions\UserNotFoundException;
 
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
@@ -20,51 +28,48 @@ $apiClient = new CoinMarketCapApi();
 $database = new Database();
 $database->setupDatabase();
 
-$conn = $database->getConnection();
+$connection = $database->getConnection();
 
-function registerUser(Connection $conn): void
-{
-    $username = readline("Enter your username: ");
-    $password = readline("Enter your password: ");
-    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-    try {
-        $conn->insert('users', [
-            'username' => $username,
-            'password' => $hashedPassword,
-            'balance' => 1000.0, // Initial balance for new users
-        ]);
-        echo "User registered successfully.\n";
-    } catch (Exception $e) {
-        echo "An error occurred during registration: " . $e->getMessage() . "\n";
-    }
-}
-
-function loginUser(Connection $conn): User
-{
-    while (true) {
-        $username = readline("Enter your username: ");
-        $password = readline("Enter your password: ");
-
-        $userData = $conn->fetchAssociative('SELECT * FROM users WHERE username = ?', [$username]);
-        if ($userData && password_verify($password, $userData['password'])) {
-            return new User($userData['id'], $userData['username'], $userData['password'], $userData['balance']);
-        } else {
-            echo "Invalid username or password. Please try again.\n";
-        }
-    }
-}
+$walletRepository = new WalletRepository($connection);
+$userRepository = new UserRepository($connection, $walletRepository);
+$transactionRepository = new TransactionRepository($connection);
+$transactionService = new TransactionService($transactionRepository);
+$registerUserService = new RegisterUserService($userRepository);
+$loginUserService = new LoginUserService($userRepository);
+$purchaseCryptoService = new PurchaseCryptoService($transactionRepository);
+$sellCryptoService = new SellCryptoService($transactionRepository);
+$walletOverviewService = new WalletOverviewService($apiClient);
 
 echo "\nWelcome to CryptoTrade!\n";
 echo "1. Register\n";
 echo "2. Login\n";
 $choice = (int)readline("Enter your choice: ");
 if ($choice === 1) {
-    registerUser($conn);
+    $username = readline("Enter your username: ");
+    $password = readline("Enter your password: ");
+    $registerUserService->registerUser($username, $password);
+    echo "User registered successfully.\n";
 }
 
-$user = loginUser($conn);
-$walletService = new WalletService($apiClient, $database, $user);
+$user = null;
+while (!$user) {
+    $username = readline("Enter your username: ");
+    $password = readline("Enter your password: ");
+    try {
+        $user = $loginUserService->loginUser($username, $password);
+    } catch (UserNotFoundException $e) {
+        echo $e->getMessage() . "\n";
+    }
+}
+
+$walletService = new WalletService(
+    $userRepository,
+    $purchaseCryptoService,
+    $sellCryptoService,
+    $walletOverviewService,
+    $transactionService,
+    $user
+);
 
 while (true) {
     echo "\nWhat would you like to do?\n";
@@ -82,7 +87,7 @@ while (true) {
         case 1: // Add balance
             $amount = (float)readline("Enter the amount to add: ");
             $walletService->getUser()->addBalance($amount);
-            $walletService->saveWallet();
+            $userRepository->update($walletService->getUser());
             echo "Balance added successfully.\n";
             break;
         case 2: // Withdraw balance
@@ -92,7 +97,7 @@ while (true) {
                 break;
             }
             $walletService->getUser()->subtractBalance($amount);
-            $walletService->saveWallet();
+            $userRepository->update($walletService->getUser());
             echo "Balance withdrawn successfully.\n";
             break;
         case 3: // List top cryptocurrencies

@@ -7,7 +7,10 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 
 class TableRenderer
 {
-    public static function render(array $headers, array $rows): void
+    public static function render(
+        array $headers,
+        array $rows
+    ): void
     {
         $output = new ConsoleOutput();
         $table = new Table($output);

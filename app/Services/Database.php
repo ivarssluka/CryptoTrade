@@ -8,7 +8,7 @@ use Doctrine\DBAL\Exception;
 
 class Database
 {
-    private Connection $conn;
+    private Connection $connection;
 
     /**
      * @throws Exception
@@ -16,57 +16,52 @@ class Database
     public function __construct()
     {
         $databasePath = __DIR__ . '/../../storage/database.sqlite';
-        $connectionParams = [
+        $params = [
             'url' => 'sqlite:///' . $databasePath,
         ];
-        $this->conn = DriverManager::getConnection($connectionParams);
+        $this->connection = DriverManager::getConnection($params);
     }
 
     public function setupDatabase()
     {
         try {
-            $schemaManager = $this->conn->createSchemaManager();
+            $schemaManager = $this->connection->createSchemaManager();
             $tables = $schemaManager->listTableNames();
-
-            if (!in_array('users', $tables)) {
-                $this->conn->executeQuery('
+            if (in_array('users', $tables) === false) {
+                $this->connection->executeQuery('
                     CREATE TABLE users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username VARCHAR(50) UNIQUE,
-                        password VARCHAR(255),
-                        balance FLOAT DEFAULT 1000.0
+                        username VARCHAR(50) NOT NULL UNIQUE,
+                        password VARCHAR(255) NOT NULL,
+                        balance FLOAT NOT NULL DEFAULT 1000.0
                     )
                 ');
             }
 
-            if (!in_array('wallets', $tables)) {
-                $this->conn->executeQuery('
+            if (in_array('wallets', $tables) === false) {
+                $this->connection->executeQuery('
                     CREATE TABLE wallets (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER,
-                        symbol VARCHAR(10),
-                        amount FLOAT,
-                        purchasePrice FLOAT,
-                        FOREIGN KEY(user_id) REFERENCES users(id)
+                        user_id INTEGER NOT NULL,
+                        symbol VARCHAR(10) NOT NULL,
+                        amount FLOAT NOT NULL,
+                        purchasePrice FLOAT NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                     )
-                ');
-            } else {
-                $this->conn->executeQuery('
-                    CREATE UNIQUE INDEX IF NOT EXISTS wallets_user_id_symbol_uindex ON wallets (user_id, symbol)
                 ');
             }
 
-            if (!in_array('transactions', $tables)) {
-                $this->conn->executeQuery('
+            if (in_array('transactions', $tables) === false) {
+                $this->connection->executeQuery('
                     CREATE TABLE transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER,
-                        type VARCHAR(10),
-                        symbol VARCHAR(10),
-                        amount FLOAT,
-                        price FLOAT,
-                        timestamp DATETIME,
-                        FOREIGN KEY(user_id) REFERENCES users(id)
+                        user_id INTEGER NOT NULL,
+                        type VARCHAR(10) NOT NULL,
+                        symbol VARCHAR(10) NOT NULL,
+                        amount FLOAT NOT NULL,
+                        price FLOAT NOT NULL,
+                        timestamp DATETIME NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                     )
                 ');
             }
@@ -79,6 +74,6 @@ class Database
 
     public function getConnection(): Connection
     {
-        return $this->conn;
+        return $this->connection;
     }
 }
