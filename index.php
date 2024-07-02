@@ -27,7 +27,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$loader = new FilesystemLoader(__DIR__ . '/app/views');
+$loader = new FilesystemLoader(__DIR__ . '/templates');
 $twig = new Environment($loader);
 
 $container = new Container();
@@ -108,26 +108,16 @@ $container['walletService'] = function($c) {
 };
 
 $dispatcher = FastRoute\simpleDispatcher(function (RouteCollector $r) {
-    $r->addRoute('GET', '/', ['CryptoTrade\Controllers\WelcomeController', 'index']);
-    $r->addRoute('GET', '/home', ['CryptoTrade\Controllers\HomeController', 'index']);
-    $r->addRoute('GET', '/register', ['CryptoTrade\Controllers\UserController', 'showRegisterForm']);
-    $r->addRoute('POST', '/register', ['CryptoTrade\Controllers\UserController', 'register']);
-    $r->addRoute('GET', '/login', ['CryptoTrade\Controllers\UserController', 'showLoginForm']);
-    $r->addRoute('POST', '/login', ['CryptoTrade\Controllers\UserController', 'login']);
-    $r->addRoute('GET', '/logout', ['CryptoTrade\Controllers\UserController', 'logout']);
-    $r->addRoute('GET', '/wallet', ['CryptoTrade\Controllers\WalletController', 'overview']);
-    $r->addRoute('GET', '/transactions', ['CryptoTrade\Controllers\WalletController', 'transactionHistory']);
-    $r->addRoute('POST', '/crypto/search', ['CryptoTrade\Controllers\HomeController', 'searchCrypto']);
-    $r->addRoute('POST', '/crypto/buy', ['CryptoTrade\Controllers\CryptoController', 'buyCrypto']);
-    $r->addRoute('POST', '/crypto/sell', ['CryptoTrade\Controllers\CryptoController', 'sellCrypto']);
-    $r->addRoute('POST', '/wallet/add', ['CryptoTrade\Controllers\WalletController', 'addBalance']);
-    $r->addRoute('POST', '/wallet/withdraw', ['CryptoTrade\Controllers\WalletController', 'withdrawBalance']);
-    $r->addRoute('GET', '/welcome', ['CryptoTrade\Controllers\WelcomeController', 'showWelcome']);
-});
-
+    $routes = include('routes.php');
+    foreach ($routes as $route)
+    {
+        [$method, $url, $controller] = $route;
+        $r->addRoute($method, $url, $controller);
+    }
+ });
 $request = $container['request'];
-$httpMethod = $request->getMethod();
-$uri = $request->getPathInfo();
+$httpMethod = $_SERVER['REQUEST_METHOD'];
+$uri = $_SERVER['REQUEST_URI'];
 
 $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
 switch ($routeInfo[0]) {
