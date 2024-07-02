@@ -16,12 +16,12 @@ class WelcomeController
         $this->twig = $container['twig'];
     }
 
-    public function index(Request $request, $vars)
+    public function index(): RedirectResponse
     {
         return new RedirectResponse('/welcome');
     }
 
-    public function showWelcome(Request $request, $vars)
+    public function showWelcome()
     {
         $session = new Session();
         $user = $session->get('user');

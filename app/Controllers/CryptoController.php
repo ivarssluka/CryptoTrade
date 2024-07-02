@@ -7,7 +7,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Session\Session;
 use CryptoTrade\Api\CoinMarketCapApi;
-use CryptoTrade\Services\Wallet\WalletService;
 
 class CryptoController
 {
@@ -22,7 +21,10 @@ class CryptoController
         $this->walletService = $container['walletService'];
     }
 
-    public function buyCrypto(Request $request, $vars)
+    public function buyCrypto(
+        Request $request,
+        $vars
+    )
     {
         $symbol = $request->request->get('symbol');
         $amount = (float)$request->request->get('amount');
@@ -41,7 +43,7 @@ class CryptoController
         return new Response('Cryptocurrency not found.', 404);
     }
 
-    public function sellCrypto(Request $request, $vars)
+    public function sellCrypto(Request $request)
     {
         $symbol = $request->request->get('symbol');
         $amount = (float)$request->request->get('amount');

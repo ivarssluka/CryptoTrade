@@ -18,7 +18,7 @@ class WalletController
         $this->walletService = $container['walletService'];
     }
 
-    public function overview(Request $request, $vars)
+    public function overview()
     {
         $session = new Session();
         $user = $session->get('user');
@@ -35,7 +35,7 @@ class WalletController
         ]));
     }
 
-    public function transactionHistory(Request $request, $vars)
+    public function transactionHistory()
     {
         $session = new Session();
         $user = $session->get('user');
@@ -52,7 +52,7 @@ class WalletController
         ]));
     }
 
-    public function addBalance(Request $request, $vars)
+    public function addBalance(Request $request): RedirectResponse
     {
         $session = new Session();
         $user = $session->get('user');
@@ -68,7 +68,7 @@ class WalletController
         return new RedirectResponse('/wallet');
     }
 
-    public function withdrawBalance(Request $request, $vars)
+    public function withdrawBalance(Request $request)
     {
         $session = new Session();
         $user = $session->get('user');

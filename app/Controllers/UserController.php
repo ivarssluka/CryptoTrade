@@ -5,9 +5,6 @@ namespace CryptoTrade\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\HttpFoundation\Session\Session;
-use CryptoTrade\Services\User\RegisterUserService;
-use CryptoTrade\Services\User\LoginUserService;
 
 class UserController
 {
@@ -24,12 +21,12 @@ class UserController
         $this->session = $container['session'];
     }
 
-    public function showRegisterForm(Request $request, $vars)
+    public function showRegisterForm(): Response
     {
         return new Response($this->twig->render('register.twig'));
     }
 
-    public function register(Request $request, $vars)
+    public function register(Request $request): RedirectResponse
     {
         $username = $request->request->get('username');
         $password = $request->request->get('password');
@@ -37,12 +34,12 @@ class UserController
         return new RedirectResponse('/login');
     }
 
-    public function showLoginForm(Request $request, $vars)
+    public function showLoginForm(): Response
     {
         return new Response($this->twig->render('login.twig'));
     }
 
-    public function login(Request $request, $vars)
+    public function login(Request $request): RedirectResponse
     {
         $username = $request->request->get('username');
         $password = $request->request->get('password');
@@ -57,7 +54,7 @@ class UserController
         return new RedirectResponse('/home');
     }
 
-    public function logout(Request $request, $vars)
+    public function logout(): RedirectResponse
     {
         $this->session->invalidate();
         return new RedirectResponse('/welcome');

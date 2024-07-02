@@ -3,7 +3,9 @@
 namespace CryptoTrade\Services\User;
 
 use CryptoTrade\Exceptions\UserNotFoundException;
+use CryptoTrade\Models\User;
 use CryptoTrade\Repositories\UserRepository;
+use Doctrine\DBAL\Exception;
 
 class LoginUserService
 {
@@ -14,7 +16,11 @@ class LoginUserService
         $this->userRepository = $userRepository;
     }
 
-    public function loginUser(string $username, string $password)
+    /**
+     * @throws UserNotFoundException
+     * @throws Exception
+     */
+    public function loginUser(string $username, string $password): User
     {
         $user = $this->userRepository->findUserByUsername($username);
         if (!$user || !password_verify($password, $user->getPassword())) {

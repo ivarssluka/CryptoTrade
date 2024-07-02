@@ -4,6 +4,7 @@ namespace CryptoTrade\Repositories;
 
 use Doctrine\DBAL\Connection;
 use CryptoTrade\Models\Wallet;
+use Doctrine\DBAL\Exception;
 
 class WalletRepository
 {
@@ -14,6 +15,9 @@ class WalletRepository
         $this->connection = $connection;
     }
 
+    /**
+     * @throws Exception
+     */
     public function findWalletByUserId(int $userId): Wallet
     {
         $walletData = $this->connection->fetchAllAssociative('SELECT * FROM wallets WHERE user_id = ?', [$userId]);
@@ -24,6 +28,9 @@ class WalletRepository
         return $wallet;
     }
 
+    /**
+     * @throws Exception
+     */
     public function saveWallet(int $userId, Wallet $wallet): void
     {
         $this->connection->executeStatement('DELETE FROM wallets WHERE user_id = ?', [$userId]);

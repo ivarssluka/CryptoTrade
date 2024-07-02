@@ -19,7 +19,7 @@ class HomeController
         $this->apiClient = new CoinMarketCapApi();
     }
 
-    public function index(Request $request, $vars)
+    public function index()
     {
         $session = new Session();
         $user = $session->get('user');
@@ -36,7 +36,7 @@ class HomeController
         ]));
     }
 
-    public function searchCrypto(Request $request, $vars)
+    public function searchCrypto(Request $request)
     {
         $symbol = $request->request->get('symbol');
         $crypto = $this->apiClient->getCryptoBySymbol($symbol);

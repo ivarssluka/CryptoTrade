@@ -6,7 +6,6 @@ use Dotenv\Dotenv;
 use FastRoute\RouteCollector;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Pimple\Container;
@@ -33,7 +32,7 @@ $twig = new Environment($loader);
 $container = new Container();
 
 $container['twig'] = $twig;
-$container['request'] = function() {
+$container['request'] = function () {
     return Request::createFromGlobals();
 };
 
@@ -43,57 +42,57 @@ if (!$session->isStarted()) {
 }
 $container['session'] = $session;
 
-$container['database'] = function() {
+$container['database'] = function () {
     $database = new Database();
     $database->setupDatabase();
     return $database;
 };
 
-$container['walletRepository'] = function($c) {
+$container['walletRepository'] = function ($c) {
     $connection = $c['database']->getConnection();
     return new WalletRepository($connection);
 };
 
-$container['userRepository'] = function($c) {
+$container['userRepository'] = function ($c) {
     $connection = $c['database']->getConnection();
     $walletRepository = $c['walletRepository'];
     return new UserRepository($connection, $walletRepository);
 };
 
-$container['transactionRepository'] = function($c) {
+$container['transactionRepository'] = function ($c) {
     $connection = $c['database']->getConnection();
     return new TransactionRepository($connection);
 };
 
-$container['registerUserService'] = function($c) {
+$container['registerUserService'] = function ($c) {
     return new RegisterUserService($c['userRepository']);
 };
 
-$container['loginUserService'] = function($c) {
+$container['loginUserService'] = function ($c) {
     return new LoginUserService($c['userRepository']);
 };
 
-$container['purchaseCryptoService'] = function($c) {
+$container['purchaseCryptoService'] = function ($c) {
     return new PurchaseCryptoService($c['transactionRepository']);
 };
 
-$container['sellCryptoService'] = function($c) {
+$container['sellCryptoService'] = function ($c) {
     return new SellCryptoService($c['transactionRepository']);
 };
 
-$container['apiClient'] = function($c) {
+$container['apiClient'] = function ($c) {
     return new CoinMarketCapApi();
 };
 
-$container['walletOverviewService'] = function($c) {
+$container['walletOverviewService'] = function ($c) {
     return new WalletOverviewService($c['apiClient']);
 };
 
-$container['transactionService'] = function($c) {
+$container['transactionService'] = function ($c) {
     return new TransactionService($c['transactionRepository']);
 };
 
-$container['walletService'] = function($c) {
+$container['walletService'] = function ($c) {
     $session = $c['session'];
     $user = $session->get('user');
 
@@ -109,12 +108,11 @@ $container['walletService'] = function($c) {
 
 $dispatcher = FastRoute\simpleDispatcher(function (RouteCollector $r) {
     $routes = include('routes.php');
-    foreach ($routes as $route)
-    {
+    foreach ($routes as $route) {
         [$method, $url, $controller] = $route;
         $r->addRoute($method, $url, $controller);
     }
- });
+});
 $request = $container['request'];
 $httpMethod = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
