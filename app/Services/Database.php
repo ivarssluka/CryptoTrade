@@ -65,8 +65,6 @@ class Database
                     )
                 ');
             }
-
-            echo "Database setup completed.\n";
         } catch (Exception $e) {
             echo "An error occurred while setting up the database: " . $e->getMessage();
         }

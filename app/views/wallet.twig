@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wallet Overview</title>
+    <link rel="stylesheet" href="/app/views/styles.css">
+</head>
+<body>
+<nav>
+    <div>Wallet Overview for {{ user.getUsername() }}</div>
+    <div>
+        <span>Balance: ${{ user.getBalance() }}</span>
+        <a href="/home">Home</a>
+        <a href="/transactions">Transaction History</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+<div class="container">
+    {% for type, messages in app.session.flashBag.all %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type }}">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <table>
+        <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Amount</th>
+            <th>Purchase Price</th>
+            <th>Current Price</th>
+            <th>Initial Value</th>
+            <th>Current Value</th>
+            <th>Profit/Loss</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in walletOverview %}
+            <tr>
+                <td>{{ item.symbol }}</td>
+                <td>{{ item.amount }}</td>
+                <td>{{ item.purchasePrice }}</td>
+                <td>{{ item.currentPrice }}</td>
+                <td>{{ item.initialValue }}</td>
+                <td>{{ item.currentValue }}</td>
+                <td>{{ item.profitLoss }}</td>
+                <td>
+                    <form action="/crypto/buy" method="post">
+                        <input type="hidden" name="symbol" value="{{ item.symbol }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Buy</button>
+                    </form>
+                    <form action="/crypto/sell" method="post">
+                        <input type="hidden" name="symbol" value="{{ item.symbol }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Sell</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

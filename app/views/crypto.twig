@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cryptocurrency Search Results</title>
+    <link rel="stylesheet" href="/app/views/styles.css">
+</head>
+<body>
+<nav>
+    <div>Cryptocurrency Search Results</div>
+    <div>
+        <a href="/home">Home</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+<div class="container">
+    {% if crypto %}
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Symbol</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>{{ crypto.getId() }}</td>
+                <td>{{ crypto.getName() }}</td>
+                <td>{{ crypto.getSymbol() }}</td>
+                <td>{{ crypto.getPrice() }}</td>
+                <td>
+                    <form action="/crypto/buy" method="post" style="display:inline;">
+                        <input type="hidden" name="symbol" value="{{ crypto.getSymbol() }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Buy</button>
+                    </form>
+                    <form action="/crypto/sell" method="post" style="display:inline;">
+                        <input type="hidden" name="symbol" value="{{ crypto.getSymbol() }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Sell</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    {% else %}
+        <p>Cryptocurrency not found.</p>
+    {% endif %}
+    <a href="/home">Go back</a>
+</div>
+</body>
+</html>

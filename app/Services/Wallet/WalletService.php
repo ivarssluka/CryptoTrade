@@ -15,7 +15,7 @@ class WalletService
     private SellCryptoService $sellCryptoService;
     private WalletOverviewService $walletOverviewService;
     private TransactionService $transactionService;
-    private User $user;
+    private ?User $user;
 
     public function __construct(
         UserRepository $userRepository,
@@ -23,7 +23,7 @@ class WalletService
         SellCryptoService $sellCryptoService,
         WalletOverviewService $walletOverviewService,
         TransactionService $transactionService,
-        User $user
+        ?User $user
     ) {
         $this->userRepository = $userRepository;
         $this->purchaseCryptoService = $purchaseCryptoService;
@@ -33,7 +33,7 @@ class WalletService
         $this->user = $user;
     }
 
-    public function getUser(): User
+    public function getUser(): ?User
     {
         return $this->user;
     }
@@ -43,7 +43,7 @@ class WalletService
         float $amount
     ): bool
     {
-        if ($this->purchaseCryptoService->purchaseCrypto($this->user, $crypto, $amount)) {
+        if ($this->user && $this->purchaseCryptoService->purchaseCrypto($this->user, $crypto, $amount)) {
             $this->saveWallet();
             return true;
         }
@@ -58,7 +58,7 @@ class WalletService
         float $amount
     ): bool
     {
-        if ($this->sellCryptoService->sellCrypto($this->user, $crypto, $amount)) {
+        if ($this->user && $this->sellCryptoService->sellCrypto($this->user, $crypto, $amount)) {
             $this->saveWallet();
             return true;
         }

@@ -5,7 +5,12 @@
     "vlucas/phpdotenv": "^5.6",
     "ext-json": "*",
     "ext-readline": "*",
-    "doctrine/dbal": "^3.8"
+    "doctrine/dbal": "^3.8",
+    "twig/twig": "^3.10",
+    "nikic/fast-route": "^1.3",
+    "symfony/http-foundation": "^5.4",
+    "symfony/http-kernel": "^5.4",
+    "pimple/pimple": "^3.5"
   },
   "autoload": {
     "psr-4": {

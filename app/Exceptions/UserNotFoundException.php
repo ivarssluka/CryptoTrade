@@ -2,10 +2,9 @@
 
 namespace CryptoTrade\Exceptions;
 
-class UserNotFoundException extends AppException
+use Exception;
+
+class UserNotFoundException extends Exception
 {
-    public function __construct(string $message = "User not found")
-    {
-        parent::__construct($message);
-    }
+    protected $message = 'User not found. Please check your credentials and try again.';
 }

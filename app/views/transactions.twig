@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transaction History</title>
+    <link rel="stylesheet" href="/app/views/styles.css">
+</head>
+<body>
+<nav>
+    <div>Transaction History for {{ user.getUsername() }}</div>
+    <div>
+        <span>Balance: ${{ user.getBalance() }}</span>
+        <a href="/home">Home</a>
+        <a href="/wallet">Wallet Overview</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+<div class="container">
+    <table>
+        <thead>
+        <tr>
+            <th>Type</th>
+            <th>Symbol</th>
+            <th>Amount</th>
+            <th>Price</th>
+            <th>Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for transaction in transactionHistory %}
+            <tr>
+                <td>{{ transaction.getType() }}</td>
+                <td>{{ transaction.getSymbol() }}</td>
+                <td>{{ transaction.getAmount() }}</td>
+                <td>{{ transaction.getPrice() }}</td>
+                <td>{{ transaction.getTimestamp() }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="/home">Go back</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CryptoTrade Home</title>
+    <link rel="stylesheet" href="/app/views/styles.css">
+</head>
+<body>
+<nav>
+    <div>Welcome, {{ user.getUsername() }}</div>
+    <div>
+        <span>Balance: ${{ user.getBalance() }}</span>
+        <a href="/wallet">Wallet Overview</a>
+        <a href="/transactions">Transaction History</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+<div class="container">
+    <h2>Top 10 Cryptocurrencies</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Symbol</th>
+            <th>Price</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for crypto in topCryptos %}
+            <tr>
+                <td>{{ crypto.getName() }}</td>
+                <td>{{ crypto.getSymbol() }}</td>
+                <td>{{ crypto.getPrice() }}</td>
+                <td>
+                    <form action="/crypto/buy" method="post">
+                        <input type="hidden" name="symbol" value="{{ crypto.getSymbol() }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Buy</button>
+                    </form>
+                    <form action="/crypto/sell" method="post">
+                        <input type="hidden" name="symbol" value="{{ crypto.getSymbol() }}">
+                        <input type="number" name="amount" step="0.0001" min="0.0001" placeholder="Amount" required>
+                        <button type="submit">Sell</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Search for a Cryptocurrency</h2>
+    <form action="/crypto/search" method="post">
+        <label for="symbol">Symbol:</label>
+        <input type="text" id="symbol" name="symbol" required>
+        <button type="submit">Search</button>
+    </form>
+</div>
+</body>
+</html>
